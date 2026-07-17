@@ -1,0 +1,633 @@
+# ROADMAP
+
+**Status:** Aprovado
+
+**Versão:** 2.5
+
+**Última atualização:** 11/07/2026
+
+---
+
+# Objetivo
+
+Definir a ordem de implementação do projeto, organizando por fases com base no estado atual do sistema, bugs conhecidos, mapeamento de telas e gaps de design system.
+
+Este documento substitui a v0.1 e reflete o estado real do código + documentação.
+
+---
+
+# Estado Atual
+
+## O que existe
+
+| Camada | Qtde | Detalhes |
+|--------|------|----------|
+| Backend | 4 módulos | Cliente, Contrato, Pagamento, Operações |
+| Frontend | 10 telas | 4 módulos, 4 CRUDs, 1 Dashboard, 1 Fluxo Operacional |
+| Shared Components | 12 | Button, ButtonLink, Navbar, EstadoTela, ConfirmModal, Card, StatusBadge, ErrorBanner, SectionHeader, SearchBar, KpiCard, QuickActions, ErrorBoundary, FeedbackOverlay |
+| Module Components | 11 | ClienteInfo, SaldoInfo, ContratoInfo, ParcelaList, CobrancaList, IndicadoresCards, RotaCobrancaSection, PagamentosHojeModal, PagamentoModal, CobrancaCard, ClienteCard |
+| Documentação | ~50 arquivos | Foundation, Product, Engineering, Design, Plans, Skills, Tasks, Templates |
+| Design System | 6 docs | UX, DESIGN-SYSTEM, COMPONENT-ARCHITECTURE, UI-COMPONENTS, TOKEN, UI-PATTERNS |
+
+## O que não existe (planejado)
+
+| Módulo | BRs | Depende de |
+|--------|-----|------------|
+| Auth | BR-055 a BR-058 | Fase 5.2 (PLAN-015) |
+| Mapa | — | Fase 5.3 |
+| PWA | — | Fase 5.4 |
+| Testes | — | Fase 5.5 |
+
+## O que está inconsistente
+
+| Problema | Severidade | Detalhe |
+|----------|-----------|---------|
+| Cards de cliente espalhados em 3 arquivos | Média | ClienteList, ClienteInfo, ClienteDetail — markup duplicado |
+| Card de contratos inline em ClienteDetail | Baixa | Não usa `Card.Root`, usa `rounded-md border bg-white p-4` manual |
+| 4 cálculos de negócio no frontend | Média | valorFinal, pagasRange, resultadoDoDia duplicados |
+
+---
+
+# Pré-requisito
+
+Os 7 componentes extraídos na Fase 1 devem nascer com tokens semânticos para evitar retrabalho na Fase 2. Por isso, a configuração de design tokens antecede a extração de componentes.
+
+## 0 — Design Tokens no tailwind.config.js
+
+**Status:** Concluído ✅
+
+**Objetivo:** Definir cores semânticas que os novos componentes shared utilizarão, sem quebrar classes raw existentes.
+
+### Configuração adicionada:
+
+```js
+colors: {
+  primary:   { DEFAULT: "#2563EB", hover: "#1D4ED8", light: "#DBEAFE", text: "#1E40AF" },
+  success:   { DEFAULT: "#16A34A", hover: "#15803D", light: "#DCFCE7", text: "#166534" },
+  warning:   { DEFAULT: "#CA8A04", light: "#FEF9C3", text: "#854D0E" },
+  danger:    { DEFAULT: "#DC2626", hover: "#B91C1C", light: "#FEE2E2", text: "#991B1B" },
+  info:      { DEFAULT: "#2563EB", light: "#DBEAFE", text: "#1E40AF" },
+  secondary: { DEFAULT: "#6B7280", light: "#F9FAFB" },
+}
+```
+
+**Impacto:** As classes raw (`blue-600`, `green-100`, etc.) continuam funcionando. Novos componentes usam `bg-primary`, `text-success`, etc.
+
+---
+
+# Fases
+
+## Fase 1 — Bug Fixes & Consistência Visual
+
+**Status:** Concluído ✅
+
+**Objetivo:** Eliminar todas as inconsistências visuais e componentes duplicados antes de implementar novas features.
+
+### 1.1 Extrair ErrorBanner → shared/
+- **Arquivos:** Criar `shared/components/ErrorBanner/`
+- **Substituir:** 5+ banners inline em `OperacoesDashboard.tsx`, `RotaPage.tsx`, `ClienteNovo.tsx`, `ContratoNovo.tsx`, `ContratoDetail.tsx`
+- **Estados:** `message`, `onRetry?`, `onDismiss?`
+- **Tamanho do problema:** 5 arquivos alterados
+
+### 1.2 Extrair SectionHeader → shared/
+- **Arquivos:** Criar `shared/components/SectionHeader/`
+- **Substituir:** `text-xl font-semibold text-gray-800` em `ClienteNovo.tsx`, `ClienteEdit.tsx`, `ContratoNovo.tsx`, `ContratoEdit.tsx`
+- **Estados:** `title`, `action?` (label + onClick)
+- **Tamanho do problema:** 4 arquivos alterados
+
+### 1.3 Extrair SearchBar → shared/
+- **Arquivos:** Criar `shared/components/SearchBar/`
+- **Substituir:** Input com `Search icon + pl-10` em `ClienteList.tsx`
+- **Estados:** `value`, `onChange`, `placeholder`, `onClear?`
+- **Tamanho do problema:** 1 arquivo alterado
+- **Nota:** `ContratoList.tsx` e `ContratoNovo.tsx` possuem inputs de busca DENTRO de dropdowns de filtro — padrão diferente (DropdownFilter), sem Search icon nem pl-10. Esses serão tratados como parte do dropdown específico ou refatorados separadamente.
+
+### 1.4 Extrair StatusBadge → shared/
+- **Arquivos:** Criar `shared/components/StatusBadge/`
+- **Substituir:** 8+ badges inline (`rounded-full px-2 py-0.5 text-xs font-medium`)
+- **Variantes:** `success` | `warning` | `danger` | `info` | `neutral`
+- **Mapeamento de estados:**
+  - Success: Paga, Ativo, Finalizado, Quitado
+  - Warning: Pendente, Parcial
+  - Danger: Atrasado, Vencida
+  - Info: Vence Hoje, Visitado
+  - Neutral: Em Andamento
+
+### 1.5 Extrair QuickActions → shared/
+- **Arquivos:** Criar `shared/components/QuickActions/`
+- **Substituir:** Grade de 4 botões em `CobrancaList.tsx` (layout horizontal) e `RotaPage.tsx` (layout vertical)
+- **Props:** `actions: Array<{icon, label, onClick, variant?}>`, `layout?: "horizontal" | "vertical"` — máx 4 ações
+- **Nota:** Os dois locais usam layouts diferentes (CobrancaList: `flex-wrap` inline; RotaPage: `flex-col` com ícone acima). O componente precisa suportar ambas as variantes.
+
+### 1.6 Extrair Card + variantes → shared/
+- **Arquivos:** Criar `shared/components/Card/`
+- **Substituir:** 4 variações de card:
+  - `ClienteList.tsx:86-99` — card de listagem
+  - `ClienteInfo.tsx:21-37` / `SaldoInfo.tsx` — cards de detalhe
+  - `CobrancaList.tsx:53-121` — card de cobrança (dashboard)
+  - `RotaPage.tsx:409-527` — card de operação (rota)
+- **Estrutura (conforme 04-UI-COMPONENTS.md):** `Card.Header → Card.Body → Card.Indicators → Card.Actions`
+- **Especificação técnica:**
+  - Padding: `p-4` (16px)
+  - Dot indicador: `h-4 w-4` (16px)
+  - Cor secundária: `text-gray-500` (#6B7280)
+  - Borda: `border-gray-200`, hover: `border-blue-300`
+  - Sombra: nenhuma (DS §160-165)
+- **Dependência:** StatusBadge (1.4) deve ser extraído antes de Card, pois `Card.Badge` delega internamente para `StatusBadge`.
+- **Correções durante extração:**
+  - `ContratoList.tsx:211` — corrigir `hover:bg-gray-50` → `hover:border-blue-300` (DESIGN-SYSTEM.md §271)
+  - `ClienteInfo.tsx:25` — Comércio como `text-base font-medium` (N1) → rebaixar para N3 (CHECKLIST §63)
+  - `ClienteInfo.tsx:21` / `SaldoInfo.tsx:13` — unificar cards de detalhe sem perder informações financeiras
+
+### 1.7 Extrair KpiCard → shared/
+- **Arquivos:** Extrair de `IndicadoresCards.tsx`
+- **Props:** `title`, `value`, `variant` (blue/green/yellow/gray), `onClick?`
+- **Unificar:** 4 cards do Dashboard (aReceber, recebido, clientes, resultado)
+
+### 1.8 Remover código morto
+- Remover imports não utilizados após substituições
+- Remover arquivos/components inline que foram extraídos
+- Verificar com `tsc --noEmit`
+
+### 1.9 Mapeamento de telas v1.2
+- Atualizar `05-MAPEAMENTO-TELAS.md`:
+  - Adicionar referência a `design/06-UI-PATTERNS.md`
+  - Adicionar referência a `tasks/2026-07-02/CHECKLIST.md`
+  - Adicionar anti-patterns por tela
+  - Atualizar árvore de componentes com shared components extraídos
+  - Atualizar `04-UI-COMPONENTS.md` com status "Implementado" para os extraídos
+
+### 1.10 ClienteCard (componente de domínio)
+
+**Status:** Concluído ✅
+
+#### Objetivo
+
+Extrair a exibição de dados do cliente para um componente `ClienteCard` reutilizável,
+eliminando markup duplicado entre ClienteList, ClienteInfo e ClienteDetail.
+
+O `ClienteCard` **compõe** `Card.Root` internamente — não substitui o Design System.
+
+#### API
+
+```tsx
+<ClienteCard variant="list-item" cliente={cliente} />
+<ClienteCard variant="detail" cliente={cliente} />
+```
+
+Navegação é externa ao componente (via `Link` ou `Card.Root as="link"`).
+
+#### Responsabilidades
+
+- exibir informações do cliente;
+- escolher layout conforme variant;
+- compor `Card.Root`, `Card.Header`, `Card.Body`.
+
+#### Não faz
+
+- regras de negócio;
+- chamadas HTTP;
+- navegação;
+- loading/disabled.
+
+#### Arquivos
+
+| Ação | Arquivo |
+|------|---------|
+| Criar | `modules/cliente/components/ClienteCard.tsx` |
+| Alterar | `ClienteList.tsx` — usar `<ClienteCard>` + `<Link>` externo |
+| Alterar | `ClienteInfo.tsx` — simplificar para wrapper |
+| Alterar | `ClienteDetail.tsx` — card de contratos → `Card.Root` |
+
+#### Descontinuado
+
+- `ClienteSummary` (proposto anteriormente) → substituído por `ClienteCard variant="list-item"`
+- `ClienteDetails` (proposto anteriormente) → substituído por `ClienteCard variant="detail"`
+
+#### Próximos componentes de domínio
+
+Após validação do padrão, aplicar a mesma estratégia para:
+
+- ContratoCard
+- PagamentoCard
+- GastoCard
+
+#### Checklist de execução
+
+| # | Entrega | Arquivos | Status |
+|---|---------|----------|--------|
+| P0 | Criar `ClienteCard.tsx` | 1 novo | ✅ Concluído |
+| P1 | Substituir card em `ClienteList.tsx` | 1 alterado | ✅ Concluído |
+| P2 | Simplificar `ClienteInfo.tsx` | 1 alterado | ✅ Concluído |
+| P3 | Card de contratos em `ClienteDetail.tsx` | 1 alterado | ✅ Concluído |
+| P4 | Remover imports não utilizados | 1 | ✅ Concluído |
+| P5 | `tsc --noEmit` | — | ✅ Concluído |
+
+#### Referência
+
+- `plans/PLAN-005-cliente-card.md` — Plano detalhado de implementação
+- `engineering/tasks/2026-07-04/CHECKLIST-FASE4.md` — Checklist executável
+
+### 1.11 Padronização Visual (Tokens + ContratoCard)
+
+**Status:** Concluído ✅
+
+#### Objetivo
+
+Eliminar inconsistências visuais remanescentes: migrar classes raw para tokens
+semânticos, padronizar ContratoInfo com `Card.Root`, criar `ContratoCard`.
+
+#### Fases
+
+| # | Entrega | Arquivos | Complexidade | Status |
+|---|---------|----------|--------------|--------|
+| F1 | Criar `ContratoCard` + migrar consumers | 1 novo + 2 alt | Média | ✅ |
+| F2 | Tokens + gap-3 + cards inline | ~10 | Média | ✅ |
+| F3 | Atualizar documentação | ~5 | Baixa | ✅ |
+
+#### Referência
+
+- `plans/PLAN-006-padronizacao-visual.md` — Plano detalhado
+- `engineering/tasks/2026-07-04/CHECKLIST-FASE5.md` — Checklist executável
+
+### 1.12 Padronização de Cards de Cobrança
+
+**Status:** Concluído (PLAN-007)
+
+#### Objetivo
+
+Eliminar inconsistências visuais em telas operacionais: ícones de ações,
+cores fora da paleta (amber), sombras em cards (ParcelaList), inputs com
+shadow-sm, cabeçalhos inconsistentes, e extrair CobrancaCard.
+
+#### Fases
+
+| # | Entrega | Arquivos | Complexidade | Status |
+|---|---------|----------|--------------|--------|
+| F1 | Ícones no CobrancaList | 1 | Muito baixa | ✅ |
+| F4 | Amber → tokens warning | 2 | Muito baixa | ✅ |
+| F5 | ParcelaList sem sombra | 1 | Baixa | ✅ |
+| F6 | Inputs sem shadow-sm | 4 | Baixa | ✅ |
+| F7 | Cabeçalhos consistentes | 2 | Muito baixa | ✅ |
+| F2 | Criar CobrancaCard | 1 novo + 2 alt | Média | ✅ |
+| F3 | Botões RotaPage padronizados | 1 | Média | ✅ |
+
+#### Referência
+
+- `plans/PLAN-007-padronizacao-cobrancas.md` — Plano detalhado
+- `engineering/tasks/2026-07-04/CHECKLIST-FASE6.md` — Checklist executável
+
+### 1.13 Carrossel de Navegação Horizontal
+
+**Status:** Concluído ✅
+
+#### Objetivo
+
+Substituir a navegação vertical/contador por um carrossel horizontal em duas telas,
+melhorando a ergonomia mobile com gestos de swipe e scroll horizontal.
+
+#### Telas afetadas
+
+| Tela | Modo | Comportamento |
+|------|------|---------------|
+| **RotaPage** | `slide` | 1 item por vez, swipe + setas + dots |
+| **Dashboard** | `scroll` | Vários itens visíveis, scroll horizontal com snap |
+| ContratoDetail, ClienteDetail, ClienteList, ContratoList | — | Não aplicável (permanecem verticais) |
+
+#### Entregas
+
+| # | Entrega | Arquivos | Complexidade | Status |
+|---|---------|----------|--------------|--------|
+| C1 | Criar Carousel component | shared/components/Carousel/ | 🟡 Média | ✅ |
+| C2 | Migrar RotaPage para slide | RotaPage.tsx | 🟡 Média | ✅ |
+| C3 | Migrar Dashboard para scroll | OperacoesDashboard.tsx | 🟡 Média | ✅ |
+
+#### Referência
+
+- `plans/PLAN-008-carrossel-navegacao.md` — Plano detalhado
+- `engineering/tasks/2026-07-04/CHECKLIST-FASE7.md` — Checklist executável
+
+---
+
+### 1.14 Conceito de Atendimento (PLAN-009)
+
+**Status:** Concluído ✅
+
+**Objetivo:** Padronizar o conceito de Atendimento de Cobrança e Resultado Operacional,
+diferenciando PENDENTE, VISITADO, NAO_ENCONTRADO e PROMESSA.
+
+Telas afetadas:
+
+| Tela | Impacto |
+|------|---------|
+| **RotaPage** | QuickActions condicionais ao resultado atual |
+| **Dashboard** | Ordenação consistente (PENDENTE primeiro) |
+| **CobrancaListPage** | Filtros usando resultadoOperacional |
+| **CobrancaCard** | Badge com cor/label para cada resultado |
+| Todas | Listas atualizadas via EventBus após registro |
+
+Entregas:
+
+| # | Entrega | Arquivos | Complexidade | Status |
+|---|---------|----------|--------------|--------|
+| P0 | Event Bus (shared/events/) | 1 novo | 🟢 Baixa | ✅ |
+| P1 | Backend: resultadoOperacional | 1 alt | 🟡 Média | ✅ |
+| P2 | Frontend: tipo + constantes | 1 alt | 🟢 Baixa | ✅ |
+| P3 | CobrancaCard: badge por resultado | 1 alt | 🟢 Baixa | ✅ |
+| P4 | RotaPage: QuickActions condicionais | 1 alt | 🟢 Baixa | ✅ |
+| P5 | Sort/filter usar resultadoOperacional | 3 alt | 🟢 Baixa | ✅ |
+| P6 | i18n: chaves dos resultados | 3 alt | 🟢 Baixa | ✅ |
+| P7 | Dashboard: ordenação consistente | 1 alt | 🟢 Baixa | ✅ |
+| P8 | Listas escutarem EventBus | 3 alt | 🟢 Baixa | ✅ |
+
+#### Referência
+
+- `plans/PLAN-009-conceito-atendimento.md` — Plano detalhado
+- `engineering/tasks/2026-07-05/CHECKLIST-FASE8.md` — Checklist executável
+
+---
+
+### 1.15 Fila Operacional de Cobrança (PLAN-010)
+
+**Status:** Concluído ✅
+
+**Objetivo:** Transformar a Rota, Cobranças do Dia e Dashboard em filas operacionais — exibindo exclusivamente clientes pendentes. Qualquer atendimento registrado remove o cliente da fila.
+
+| # | Entrega | Arquivos | Complexidade |
+|---|---------|----------|--------------|
+| P0 | Carousel: prop `hideDots` + `maxDots` + `itemKey` | 1 alt | 🟢 Baixa |
+| P1 | RouteProgress: componente de progresso | 1 novo | 🟢 Baixa |
+| P2 | RotaPage: só PENDENTE na fila | 1 alt | 🟢 Baixa |
+| P3 | Cobranças: simplificar lista + remover filtros | 2 alt | 🟢 Baixa |
+| P4 | Dashboard: só PENDENTE | 1 alt | 🟢 Baixa |
+
+#### Referência
+
+- `plans/PLAN-010-barra-progresso.md` — Plano detalhado
+- `engineering/tasks/2026-07-05/CHECKLIST-FASE9.md` — Checklist executável
+
+---
+
+### 1.16 Atendidos Hoje (PLAN-011)
+
+**Status:** Concluído
+
+**Objetivo:** Exibir todos os clientes atendidos no dia com filtro por resultado operacional, complementando a fila operacional do PLAN-010.
+
+| # | Entrega | Arquivos | Complexidade |
+|---|---------|----------|--------------|
+| P1 | AtendidosPage | 1 novo | 🟢 Baixa |
+| P2 | Rota `/atendidos` | 1 alt | 🟢 Baixa |
+| P3 | Link no Dashboard | 1 alt | 🟢 Baixa |
+| P4 | i18n: 2 chaves | 3 alt | 🟢 Baixa |
+
+#### Referência
+
+- `plans/PLAN-011-atendidos-hoje.md` — Plano detalhado
+- `engineering/tasks/2026-07-05/CHECKLIST-FASE10.md` — Checklist executável
+
+---
+
+### 1.17 Resumo Operacional da Rota (PLAN-012)
+
+**Status:** Concluído
+
+**Objetivo:** Evoluir o RouteProgress com resumo detalhado dos resultados operacionais (visitados, promessas, não encontrados, pagos).
+
+| # | Entrega | Arquivos | Complexidade |
+|---|---------|----------|--------------|
+| P1 | RouteProgress: novas props + layout | 1 alt | 🟢 Baixa |
+| P2 | RotaPage: fetch pagamentos + contagens | 1 alt | 🟢 Baixa |
+| P3 | i18n: `resumo.pagos` | 3 alt | 🟢 Baixa |
+
+#### Referência
+
+- `plans/PLAN-012-resumo-operacional-rota.md` — Plano detalhado
+- `engineering/tasks/2026-07-05/CHECKLIST-FASE11.md` — Checklist executável
+
+---
+
+## Fase 2 — Tema & Identidade Visual
+
+**Status:** Concluído ✅
+
+**Objetivo:** Dar identidade visual ao sistema, refinando tokens já configurados (Fase 0) e aplicando identidade visual.
+
+### 2.1 CSS custom properties no index.css
+- Definir `:root { --color-primary: ..., --font-sans: ... }`
+- Permitir que dark mode ou futuros temas sobrescrevam as variáveis
+
+### 2.2 Migração gradual de classes raw para tokens
+- **Não quebrar nada existente** — classes `blue-600`, `green-600` continuam funcionando
+- Só novas implementações usam `bg-primary`, `text-success`, etc.
+- Prioridade: componentes extraídos na Fase 1 já nascem com tokens ✅ (Pré-requisito 0)
+
+### 2.3 Fonte Inter explícita
+- `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');` no `index.html`
+- `fontFamily: { sans: ["Inter", "system-ui", "sans-serif"] }` no Tailwind config
+
+### 2.4 Favicon + title + metatags
+- Adicionar `<title>Gestão de Cobranças</title>` no `index.html`
+- Adicionar `<link rel="icon">` (criar favicon)
+- Adicionar viewport + theme-color metatags
+
+### 2.5 Verificar contraste WCAG AA
+- Contraste mínimo 4.5:1 para texto normal
+- Contraste mínimo 3:1 para texto grande
+- Ferramenta: verificar combinações das cores customizadas
+
+---
+
+## Fase 3 — Qualidade Técnica
+
+**Status:** Concluído ✅
+
+**Objetivo:** Reduzir endividamento técnico — unificar feedback, migrar formulários para react-hook-form+zod, organizar schemas por módulo, remover duplicação de lógica. Cada arquivo alterado no máximo 1 vez.
+
+**Ordem de implementação refinada conforme `plans/PLAN-004-feedback.md`.** Não seguir a numeração abaixo como ordem — consultar `CHECKLIST-FASE3.md` e `PLAN-004-feedback.md`.
+
+### 3.1 Error boundaries globais
+- **Ordem:** Primeiro (independente, zero dependências)
+- **Arquivos:** Criar `shared/components/ErrorBoundary.tsx`, alterar `App.tsx`
+- **Escopo:** Capturar erros não tratados no React, exibir fallback amigável
+
+### 3.2 Feedback Global — Infraestrutura
+- **Ordem:** Segundo (antes de qualquer consumidor)
+- **Plano:** `plans/PLAN-004.1-feedback.md` (detalha implementação)
+- **Arquivos:** Criar `shared/feedback/FeedbackProvider.tsx`, `shared/feedback/useFeedback.ts`, `shared/feedback/FeedbackOverlay.tsx`
+- **Escopo:** Provider + hook + componente de overlay (barra fixa superior). Nenhuma tela alterada nesta etapa.
+- **Detalhes:** Posicionamento topo, não bloqueante, 3 estados (loading/success/error), duração 600ms/1200ms/4000ms
+
+### 3.3 Formulários + react-hook-form + zod + Feedback Global
+- **Ordem:** Terceiro (depende do Feedback infra)
+- **Arquivos:** `ClienteNovo.tsx`, `ClienteEdit.tsx`, `ContratoNovo.tsx`, `ContratoEdit.tsx`
+- **Processo:** Para cada formulário, migrar em 1 toque:
+  - Substituir `useState` + `validar()` por `useForm` + `zod` + `@hookform/resolvers`
+  - Integrar com Feedback Global (`useFeedback().run()`)
+  - Remover estados locais de loading/erro
+  - Remover Toasts/ErrorBanner locais
+- **Schemas:** Organizados por módulo: `cliente/schemas/`, `contrato/schemas/`
+- **Cálculos preview:** `valorFinal` mantido para exibição informativa (backend é fonte oficial)
+- **Validações:** Apenas visuais (tamanho, formato). Regras de negócio no backend.
+
+### 3.4 Remover Button.loading
+- **Ordem:** Quarto (apenas após todos os consumidores migrados)
+- **Escopo:** Remover prop `loading` e `<Spinner />` interno do `Button.tsx`
+
+### 3.5 Migrar feedback restante
+- **Ordem:** Quinto
+- **Arquivos:** `RotaPage.tsx` (banner verde), `ContratoDetail.tsx` (Toast), `PagamentoModal.tsx` (loading)
+
+### 3.6 Refactors finais
+- **Ordem:** Sexto
+- **Arquivos:** `PagamentoModal.tsx` (pagasRange), `OperacoesDashboard.tsx` (resultadoDoDia)
+
+### Referências
+- `plans/PLAN-004-feedback.md` — Sistema global de feedback
+- `engineering/tasks/2026-07-03/CHECKLIST-FASE3.md` — Checklist executável
+
+---
+
+## Fase 4 — Novos Módulos
+
+**Status:** Concluído ✅
+
+**Objetivo:** Implementar módulos de Caixa e Gasto, completando as regras de negócio documentadas em BUSINESS-RULES.md.
+
+### 4.1 Módulo Caixa (BR-018 a BR-027)
+- **Backend:**
+  - Entidades: `Caixa`, `MovimentacaoFinanceira`, `FechamentoSemanal`
+  - Use Cases: `AjustarCaixaBase`, `ListarMovimentacoes`, `LiquidarSemana`
+  - Endpoints: `GET /api/caixa`, `POST /api/caixa/ajuste`, `GET /api/caixa/movimentacoes`, `POST /api/caixa/liquidar`
+- **Frontend:**
+  - Tela: Caixa (indicadores + ajuste + movimentações + liquidação)
+  - Componentes: `CaixaIndicadores`
+- **Integração:** Dashboard com KPI card de Caixa Base, Navbar com link Caixa
+
+### 4.2 Módulo Gasto (BR-028)
+- **Backend:**
+  - Entidades: `Gasto`
+  - Use Cases: `CreateGasto`, `ListGastos`, `DeleteGasto`
+  - Endpoints: `POST /api/gastos`, `GET /api/gastos`, `DELETE /api/gastos/:id`
+- **Frontend:**
+  - Tela: Gastos (formulário + lista)
+  - Componentes: `GastoForm`, `GastoList`
+- **Integração:** Dashboard com KPI card de Gastos do Dia, Navbar com link Gastos
+
+### 4.3 Atualizar Dashboard com indicadores completos
+- Caixa Base atual
+- Gastos do Dia
+- Indicadores semanais na tela de Caixa
+
+### 4.4 Banco de Dados
+- Nova tabela `gastos`
+- Nova tabela `fechamentos_semanais`
+
+#### Referência
+
+- `plans/PLAN-014-caixa-gasto.md` — Plano detalhado
+- `engineering/tasks/2026-07-11/CHECKLIST-FASE12.md` — Checklist executável
+
+---
+
+## Fase 5 — Polimento (Futuro)
+
+**Status:** Em andamento
+
+### 5.1 Dark mode ✅
+- Strategy: `class` no Tailwind
+- Toggle no Navbar
+- Variáveis CSS para modo escuro
+- **Status:** Concluído — `plans/PLAN-013-dark-mode.md`
+
+### 5.2 Multi-usuário + autenticação
+
+**Status:** Planejado
+
+- Login JWT com email + senha
+- Isolamento de dados por operador (BR-056)
+- Admin cria novos operadores (BR-057)
+- Middleware de autenticação em todas as rotas `/api/*`
+- 8 tabelas com coluna `userId` + filtro em ~60 queries
+- Frontend: LoginPage, AuthContext, ProtectedRoute, logout no Navbar
+- **Prioridade:** Média
+
+#### Referência
+
+- `plans/PLAN-015-autenticacao.md` — Plano detalhado
+
+### 5.3 Visualização em mapa
+- Integração com Google Maps (já tem `maps.ts`)
+- Pin dos clientes no mapa
+- Rota otimizada
+- **Priordiade:** Média — jã existe `RotaCobrancaSection`
+
+### 5.4 PWA / instalação mobile
+- Service worker
+- Manifest.json
+- Cache de assets
+- **Priordiade:** Média — melhor experiência mobile
+
+### 5.5 Testes automatizados
+- Vitest para backend
+- React Testing Library para frontend
+- **Prioridade:** Média — cobertura atual = 0%
+
+### 5.6 Endereço do Comércio + GPS
+- Separar endereço pessoal do endereço do comércio
+- Botão "Usar local atual" via GPS do dispositivo
+- Botão Navegar usa endereço do comércio como destino
+- **Status:** Planejado — `plans/PLAN-016-endereco-comercio.md`
+- **Prioridade:** Média — melhora usabilidade do operador em campo
+
+---
+
+# Marcos (Milestones)
+
+| Marco | Fase | Prazo estimado | Critério de conclusão |
+|-------|------|---------------|-----------------------|
+| M0 — Design tokens configurados | Pré-req | Antes de F1 | `tailwind.config.js` com cores semânticas, `tsc --noEmit` |
+| M1 — Componentes inline extraídos | F1 | Próxima sessão | 7 novos shared components, 0 código inline duplicado, `tsc --noEmit` |
+| M2 — Telas consistentes | F1 | +1 sessão | Nenhum anti-pattern ativo, cards unificados, badges padronizados, hover corrigido |
+| M3 — Tema implementado | F2 | +1 sessão | CSS custom properties, fonte Inter, favicon, WCAG AA |
+| M4 — ErrorBoundary + Feedback infra | F3 | +1 sessão | ErrorBoundary no App, FeedbackOverlay funcional, zero consumidores ainda |
+| M5 — Formulários migrados + Feedback ativo | F3 | +2 sessões | 4 formulários com react-hook-form+zod, Feedback Global integrado, Button.loading removido |
+| M6 — Caixa + Gasto | F4 | ✅ Concluído | BR-018 a BR-028 implementados, testados |
+| M7 — Autenticação + Multi-usuário | F5 | Planejado | PLAN-015 em execução |
+| M8 — PWA + Mapa | F5 | TBD | Funcionalidades extras |
+| M9 — Endereço do Comércio | F5 | Planejado | PLAN-016: endereço comércio separado + GPS |
+
+---
+
+# Fluxo de Execução
+
+Cada fase segue o processo definido nas Skills do projeto:
+
+```
+SKILL-003 (Planejar) → SKILL-004 (Implementar) → SKILL-005 (Revisar)
+  → SKILL-002 (Validar Arquitetura) → SKILL-007 (Avaliar UX)
+  → SKILL-001 (Atualizar Documentação)
+```
+
+Para bugs: `SKILL-006 (Bug Investigator)` antes de `SKILL-004`.
+
+A Fase 3 possui checklist próprio: `tasks/2026-07-03/CHECKLIST-FASE3.md`.
+
+---
+
+# Referências
+
+- `product/00-PROJECT.md` — Visão do produto
+- `product/01-DOMAIN.md` — Entidades do domínio
+- `product/02-BUSINESS-RULES.md` — Regras de negócio (BR-001 a BR-058)
+- `product/03-PRD.md` — Product Requirements Document
+- `product/05-CONVENTIONS.md` — Convenções de código
+- `engineering/05-MAPEAMENTO-TELAS.md` — Mapeamento das 10 telas
+- `engineering/design/02-DESIGN-SYSTEM.md` — Identidade visual
+- `engineering/design/03-COMPONENT-ARCHITECTURE.md` — Arquitetura de componentes
+- `engineering/design/04-UI-COMPONENTS.md` — Catálogo de componentes
+- `engineering/design/05-TOKEN.md` — Design tokens
+- `engineering/design/06-UI-PATTERNS.md` — Padrões de composição e anti-patterns
+- `engineering/tasks/2026-07-02/CHECKLIST.md` — Checklist de preparação para F1
+- `plans/PLAN-004-feedback.md` — Sistema global de feedback (estratégia refinada)
+- `plans/PLAN-005-cliente-card.md` — ClienteCard: componentização e padronização

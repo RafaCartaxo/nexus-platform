@@ -1,0 +1,92 @@
+import { useState, useEffect, useCallback, useRef } from "react"
+import { useTranslation } from "react-i18next"
+import { ChevronLeft } from "lucide-react"
+import { SearchBar } from "../../../shared/components/SearchBar/SearchBar.js"
+import { Link } from "react-router-dom"
+import { ClienteCard } from "../components/ClienteCard.js"
+import {
+  listClientes,
+  type Cliente,
+} from "../services/cliente.service.js"
+import { ApiError } from "../../../api/client.js"
+import { EstadoTela } from "../../../shared/components/EstadoTela.js"
+import { ButtonLink } from "../../../shared/components/Button.js"
+
+
+export function ClienteList() {
+  const { t } = useTranslation()
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  const fetch = useCallback(async (nome?: string) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const result = await listClientes(nome ? { nome } : undefined)
+      setClientes(result.data)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else {
+        setError(t("cliente.erroCarregar"))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    debounceRef.current = setTimeout(() => {
+      fetch(searchTerm || undefined)
+    }, 300)
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [searchTerm, fetch])
+
+  return (
+    <div className="mx-auto max-w-2xl p-4">
+      <div className="mb-6 flex items-center gap-2">
+        <Link to="/" className="text-text-muted hover:text-text-primary">
+              <ChevronLeft className="h-5 w-5" />
+        </Link>
+        <h1 className="flex-1 text-3xl font-semibold">{t("cliente.title")}</h1>
+        <ButtonLink to="/clientes/novo">
+          {t("cliente.novo")}
+        </ButtonLink>
+      </div>
+
+      <div className="mb-4">
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder={t("cliente.buscarPlaceholder")}
+        />
+      </div>
+
+      <EstadoTela
+        loading={loading}
+        error={error}
+        empty={clientes.length === 0}
+        emptyMessage={t("cliente.nenhumEncontrado")}
+        emptyAction={{ label: t("cliente.novo"), to: "/clientes/novo" }}
+        onRetry={() => fetch(searchTerm || undefined)}
+      >
+        <div className="space-y-4">
+          {clientes.map((cliente) => (
+            <Link key={cliente.id} to={`/clientes/${cliente.id}`} className="block">
+              <ClienteCard variant="list-item" cliente={cliente} />
+            </Link>
+          ))}
+        </div>
+      </EstadoTela>
+    </div>
+  )
+}

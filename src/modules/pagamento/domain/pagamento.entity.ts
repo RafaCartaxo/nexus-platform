@@ -1,0 +1,18 @@
+export interface Pagamento {
+  id: string
+  contratoId: string
+  valor: number
+  data: string
+  createdAt: string
+}
+
+export interface PagamentoParcela {
+  id: string
+  pagamentoId: string
+  parcelaId: string
+  valor: number
+}
+
+export interface PagamentoComDetalhes extends Pagamento {
+  parcelas: PagamentoParcela[]
+}

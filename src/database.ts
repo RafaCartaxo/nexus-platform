@@ -1,0 +1,336 @@
+import Database from "better-sqlite3"
+import type { Database as DatabaseType } from "better-sqlite3"
+import { drizzle } from "drizzle-orm/better-sqlite3"
+import { sqliteTable, text, real, integer } from "drizzle-orm/sqlite-core"
+import { getLocalDateString } from "./shared/utils/parseDateLocal.js"
+
+const sqlite: DatabaseType = new Database("gestao.db")
+export { sqlite }
+sqlite.pragma("journal_mode = WAL")
+sqlite.pragma("foreign_keys = ON")
+
+export const db = drizzle(sqlite)
+
+export const clientes = sqliteTable("clientes", {
+  id: text("id").primaryKey(),
+  nome: text("nome").notNull(),
+  cpf: text("cpf"),
+  comercio: text("comercio").notNull(),
+  telefone: text("telefone").notNull(),
+  telefoneComercio: text("telefoneComercio"),
+  logradouro: text("logradouro").notNull(),
+  numero: text("numero"),
+  complemento: text("complemento"),
+  bairro: text("bairro"),
+  cidade: text("cidade"),
+  estado: text("estado"),
+  lat: real("lat"),
+  lng: real("lng"),
+  comercioLogradouro: text("comercioLogradouro"),
+  comercioNumero: text("comercioNumero"),
+  comercioBairro: text("comercioBairro"),
+  comercioCidade: text("comercioCidade"),
+  comercioEstado: text("comercioEstado"),
+  comercioLat: real("comercioLat"),
+  comercioLng: real("comercioLng"),
+  createdAt: text("createdAt").notNull(),
+  updatedAt: text("updatedAt").notNull(),
+  deletedAt: text("deletedAt"),
+})
+
+export const contratos = sqliteTable("contratos", {
+  id: text("id").primaryKey(),
+  clienteId: text("clienteId").notNull(),
+  valorBase: real("valorBase").notNull(),
+  percentualJuros: real("percentualJuros").notNull(),
+  valorFinal: real("valorFinal").notNull(),
+  quantidadeParcelas: integer("quantidadeParcelas").notNull(),
+  dataInicio: text("dataInicio").notNull(),
+  dataFinal: text("dataFinal").notNull(),
+  estado: text("estado").notNull().default("Ativo"),
+  createdAt: text("createdAt").notNull(),
+  updatedAt: text("updatedAt").notNull(),
+  deletedAt: text("deletedAt"),
+})
+
+export const parcelas = sqliteTable("parcelas", {
+  id: text("id").primaryKey(),
+  contratoId: text("contratoId").notNull(),
+  numero: integer("numero").notNull(),
+  valorPrevisto: real("valorPrevisto").notNull(),
+  valorPago: real("valorPago").notNull().default(0),
+  saldoPendente: real("saldoPendente").notNull(),
+  estado: text("estado").notNull().default("Pendente"),
+  dataVencimento: text("dataVencimento").notNull(),
+  dataQuitacao: text("dataQuitacao"),
+  createdAt: text("createdAt").notNull(),
+  updatedAt: text("updatedAt").notNull(),
+  deletedAt: text("deletedAt"),
+})
+
+export const movimentacoesFinanceiras = sqliteTable("movimentacoesFinanceiras", {
+  id: text("id").primaryKey(),
+  tipo: text("tipo").notNull(),
+  valor: real("valor").notNull(),
+  origem: text("origem").notNull(),
+  origemId: text("origemId").notNull(),
+  descricao: text("descricao"),
+  data: text("data").notNull(),
+  createdAt: text("createdAt").notNull(),
+})
+
+export const caixaConfig = sqliteTable("caixa_config", {
+  id: text("id").primaryKey().default("default"),
+  caixaBase: real("caixaBase").notNull().default(0),
+  updatedAt: text("updatedAt").notNull(),
+})
+
+export const pagamentos = sqliteTable("pagamentos", {
+  id: text("id").primaryKey(),
+  contratoId: text("contratoId").notNull(),
+  valor: real("valor").notNull(),
+  data: text("data").notNull(),
+  createdAt: text("createdAt").notNull(),
+})
+
+export const pagamentoParcelas = sqliteTable("pagamento_parcelas", {
+  id: text("id").primaryKey(),
+  pagamentoId: text("pagamentoId").notNull(),
+  parcelaId: text("parcelaId").notNull(),
+  valor: real("valor").notNull(),
+})
+
+export const historicoOperacional = sqliteTable("historico_operacional", {
+  id: text("id").primaryKey(),
+  clienteId: text("clienteId").notNull(),
+  contratoId: text("contratoId").notNull(),
+  tipo: text("tipo").notNull(),
+  dataPromessa: text("dataPromessa"),
+  createdAt: text("createdAt").notNull(),
+})
+
+export const gastos = sqliteTable("gastos", {
+  id: text("id").primaryKey(),
+  valor: real("valor").notNull(),
+  categoria: text("categoria").notNull(),
+  observacao: text("observacao"),
+  data: text("data").notNull(),
+  createdAt: text("createdAt").notNull(),
+  deletedAt: text("deletedAt"),
+})
+
+export const fechamentosSemanais = sqliteTable("fechamentos_semanais", {
+  id: text("id").primaryKey(),
+  dataInicio: text("dataInicio").notNull(),
+  dataFim: text("dataFim").notNull(),
+  totalRecebido: real("totalRecebido").notNull(),
+  totalGasto: real("totalGasto").notNull(),
+  resultado: real("resultado").notNull(),
+  caixaBase: real("caixaBase").notNull().default(0),
+  saldoFechamento: real("saldoFechamento").notNull().default(0),
+  createdAt: text("createdAt").notNull(),
+})
+
+export function createTables() {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS clientes (
+      id TEXT PRIMARY KEY,
+      nome TEXT NOT NULL,
+      cpf TEXT,
+      comercio TEXT NOT NULL,
+      telefone TEXT NOT NULL,
+      telefoneComercio TEXT,
+      logradouro TEXT NOT NULL,
+      numero TEXT,
+      complemento TEXT,
+      bairro TEXT,
+      cidade TEXT,
+      estado TEXT,
+      lat REAL,
+      lng REAL,
+      comercioLogradouro TEXT,
+      comercioNumero TEXT,
+      comercioBairro TEXT,
+      comercioCidade TEXT,
+      comercioEstado TEXT,
+      comercioLat REAL,
+      comercioLng REAL,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      deletedAt TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS contratos (
+      id TEXT PRIMARY KEY,
+      clienteId TEXT NOT NULL,
+      valorBase REAL NOT NULL,
+      percentualJuros REAL NOT NULL,
+      valorFinal REAL NOT NULL,
+      quantidadeParcelas INTEGER NOT NULL,
+      dataInicio TEXT NOT NULL,
+      dataFinal TEXT NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'Ativo',
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      deletedAt TEXT,
+      FOREIGN KEY (clienteId) REFERENCES clientes(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS parcelas (
+      id TEXT PRIMARY KEY,
+      contratoId TEXT NOT NULL,
+      numero INTEGER NOT NULL,
+      valorPrevisto REAL NOT NULL,
+      valorPago REAL NOT NULL DEFAULT 0,
+      saldoPendente REAL NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'Pendente',
+      dataVencimento TEXT NOT NULL,
+      dataQuitacao TEXT,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      deletedAt TEXT,
+      FOREIGN KEY (contratoId) REFERENCES contratos(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS movimentacoesFinanceiras (
+      id TEXT PRIMARY KEY,
+      tipo TEXT NOT NULL,
+      valor REAL NOT NULL,
+      origem TEXT NOT NULL,
+      origemId TEXT NOT NULL,
+      descricao TEXT,
+      data TEXT NOT NULL,
+      createdAt TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS caixa_config (
+      id TEXT PRIMARY KEY DEFAULT 'default',
+      caixaBase REAL NOT NULL DEFAULT 0,
+      updatedAt TEXT NOT NULL
+    );
+
+    INSERT OR IGNORE INTO caixa_config (id, caixaBase, updatedAt) VALUES ('default', 0, datetime('now'));
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_clientes_cpf ON clientes(cpf) WHERE cpf IS NOT NULL AND deletedAt IS NULL;
+    CREATE INDEX IF NOT EXISTS idx_movimentacoes_data ON movimentacoesFinanceiras(data);
+    CREATE INDEX IF NOT EXISTS idx_movimentacoes_origem ON movimentacoesFinanceiras(origem, origemId);
+    CREATE INDEX IF NOT EXISTS idx_parcelas_contrato ON parcelas(contratoId);
+    CREATE INDEX IF NOT EXISTS idx_contratos_cliente ON contratos(clienteId);
+
+    CREATE TABLE IF NOT EXISTS pagamentos (
+      id TEXT PRIMARY KEY,
+      contratoId TEXT NOT NULL,
+      valor REAL NOT NULL,
+      data TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      FOREIGN KEY (contratoId) REFERENCES contratos(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS pagamento_parcelas (
+      id TEXT PRIMARY KEY,
+      pagamentoId TEXT NOT NULL,
+      parcelaId TEXT NOT NULL,
+      valor REAL NOT NULL,
+      FOREIGN KEY (pagamentoId) REFERENCES pagamentos(id),
+      FOREIGN KEY (parcelaId) REFERENCES parcelas(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pagamentos_contrato ON pagamentos(contratoId);
+    CREATE INDEX IF NOT EXISTS idx_pagamento_parcelas_pagamento ON pagamento_parcelas(pagamentoId);
+    CREATE INDEX IF NOT EXISTS idx_pagamento_parcelas_parcela ON pagamento_parcelas(parcelaId);
+
+    CREATE TABLE IF NOT EXISTS historico_operacional (
+      id TEXT PRIMARY KEY,
+      clienteId TEXT NOT NULL,
+      contratoId TEXT NOT NULL,
+      tipo TEXT NOT NULL CHECK(tipo IN ('visitado', 'nao_localizado', 'promessa')),
+      dataPromessa TEXT,
+      createdAt TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_historico_operacional_dia
+      ON historico_operacional(clienteId, contratoId, createdAt);
+
+    CREATE TABLE IF NOT EXISTS gastos (
+      id TEXT PRIMARY KEY,
+      valor REAL NOT NULL,
+      categoria TEXT NOT NULL,
+      observacao TEXT,
+      data TEXT NOT NULL,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      deletedAt TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_gastos_data ON gastos(data);
+
+    CREATE TABLE IF NOT EXISTS fechamentos_semanais (
+      id TEXT PRIMARY KEY,
+      dataInicio TEXT NOT NULL,
+      dataFim TEXT NOT NULL,
+      totalRecebido REAL NOT NULL,
+      totalGasto REAL NOT NULL,
+      resultado REAL NOT NULL,
+      caixaBase REAL NOT NULL DEFAULT 0,
+      saldoFechamento REAL NOT NULL DEFAULT 0,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_fechamentos_semanais_data ON fechamentos_semanais(dataInicio);
+
+  `)
+
+  // Migracao: adicionar coluna dataFinal em bancos existentes (ignorar se ja existe)
+  try {
+    sqlite.exec("ALTER TABLE contratos ADD COLUMN dataFinal TEXT NOT NULL DEFAULT ''")
+    const semDataFinal = sqlite.prepare(
+      "SELECT id, dataInicio, quantidadeParcelas FROM contratos WHERE dataFinal = ''"
+    ).all() as { id: string; dataInicio: string; quantidadeParcelas: number }[]
+    for (const row of semDataFinal) {
+      const data = new Date(row.dataInicio)
+      data.setDate(data.getDate() + row.quantidadeParcelas)
+      if (data.getDay() === 0) {
+        data.setDate(data.getDate() + 1)
+  // Migracao: normalizar datas ISO 8601 completas para date-only nas movimentacoes
+  sqlite.exec(`
+    UPDATE movimentacoesFinanceiras
+    SET data = substr(data, 1, 10)
+    WHERE length(data) > 10
+  `)
+
+  // Migracao: adicionar coluna saldoFechamento em fechamentos_semanais existentes
+  try {
+    sqlite.exec("ALTER TABLE fechamentos_semanais ADD COLUMN saldoFechamento REAL NOT NULL DEFAULT 0")
+  } catch {
+    // coluna ja existe
+  }
+}
+      const dataFinal = getLocalDateString(data)
+      sqlite.prepare("UPDATE contratos SET dataFinal = ? WHERE id = ?").run(dataFinal, row.id)
+    }
+  } catch {
+    // coluna ja existe (banco novo ou migracao ja aplicada)
+  }
+
+  // Migracao: adicionar coluna caixaBase em fechamentos_semanais existentes
+  try {
+    sqlite.exec("ALTER TABLE fechamentos_semanais ADD COLUMN caixaBase REAL NOT NULL DEFAULT 0")
+  } catch {
+    // coluna ja existe
+  }
+
+  // Migracao: adicionar coluna telefoneComercio em clientes existentes
+  try {
+    sqlite.exec("ALTER TABLE clientes ADD COLUMN telefoneComercio TEXT")
+  } catch {
+    // coluna ja existe
+  }
+
+  // Migracao: adicionar colunas de endereco do comercio em clientes existentes
+  try { sqlite.exec("ALTER TABLE clientes ADD COLUMN comercioLogradouro TEXT") } catch { /* ja existe */ }
+  try { sqlite.exec("ALTER TABLE clientes ADD COLUMN comercioNumero TEXT") } catch { /* ja existe */ }
+  try { sqlite.exec("ALTER TABLE clientes ADD COLUMN comercioBairro TEXT") } catch { /* ja existe */ }
+  try { sqlite.exec("ALTER TABLE clientes ADD COLUMN comercioCidade TEXT") } catch { /* ja existe */ }
+  try { sqlite.exec("ALTER TABLE clientes ADD COLUMN comercioEstado TEXT") } catch { /* ja existe */ }
+  try { sqlite.exec("ALTER TABLE clientes ADD COLUMN comercioLat REAL") } catch { /* ja existe */ }
+  try { sqlite.exec("ALTER TABLE clientes ADD COLUMN comercioLng REAL") } catch { /* ja existe */ }
+}

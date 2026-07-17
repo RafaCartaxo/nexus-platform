@@ -1,0 +1,276 @@
+{
+  "info": {
+    "name": "Gestão de Cobranças — API",
+    "description": "Coleção dos endpoints da API",
+    "version": "1.1.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Clientes",
+      "item": [
+        {
+          "name": "Criar Cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"João Silva\",\n  \"cpf\": \"12345678900\",\n  \"comercio\": \"Padaria do João\",\n  \"telefone\": \"11999999999\",\n  \"endereco\": {\n    \"logradouro\": \"Rua A\",\n    \"numero\": \"123\",\n    \"bairro\": \"Centro\",\n    \"cidade\": \"São Paulo\"\n  },\n  \"localizacao\": {\n    \"lat\": -23.5505,\n    \"lng\": -46.6333\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clientes"]
+            }
+          }
+        },
+        {
+          "name": "Listar Clientes",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes?page=1&limit=20&sort=createdAt&order=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clientes"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "sort", "value": "createdAt" },
+                { "key": "order", "value": "asc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar Clientes por Nome",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes?nome=João",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clientes"],
+              "query": [
+                { "key": "nome", "value": "João" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar Cliente por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes/{{clienteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clientes", "{{clienteId}}"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Cliente (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"João Silva Atualizado\",\n  \"telefone\": \"11988888888\",\n  \"endereco\": {\n    \"bairro\": \"Jardins\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes/{{clienteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clientes", "{{clienteId}}"]
+            }
+          }
+        },
+        {
+          "name": "Excluir Cliente",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes/{{clienteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clientes", "{{clienteId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contratos",
+      "item": [
+        {
+          "name": "Criar Contrato",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteId}}\",\n  \"valorBase\": 500,\n  \"percentualJuros\": 20,\n  \"quantidadeParcelas\": 10,\n  \"dataInicio\": \"2026-07-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contratos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contratos"]
+            }
+          }
+        },
+        {
+          "name": "Listar Contratos",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/contratos?page=1&limit=20&sort=createdAt&order=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contratos"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "sort", "value": "createdAt" },
+                { "key": "order", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Contratos por Cliente",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/contratos?clienteId={{clienteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contratos"],
+              "query": [
+                { "key": "clienteId", "value": "{{clienteId}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar Contrato por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/contratos/{{contratoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contratos", "{{contratoId}}"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Contrato (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valorBase\": 600,\n  \"percentualJuros\": 15\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contratos/{{contratoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contratos", "{{contratoId}}"]
+            }
+          }
+        },
+        {
+          "name": "Excluir Contrato",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/contratos/{{contratoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contratos", "{{contratoId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pagamentos",
+      "item": [
+        {
+          "name": "Registrar Pagamento",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contratoId\": \"{{contratoId}}\",\n  \"valor\": 60.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pagamentos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pagamentos"]
+            }
+          }
+        },
+        {
+          "name": "Listar Pagamentos do Contrato",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pagamentos/contrato/{{contratoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pagamentos", "contrato", "{{contratoId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "clienteId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "contratoId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

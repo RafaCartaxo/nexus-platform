@@ -1,0 +1,358 @@
+import { useCallback, useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
+import { useParams, useNavigate, Link } from "react-router-dom"
+import { getContrato, deleteContrato } from "../services/contrato.service.js"
+import type { Contrato, Parcela } from "../services/contrato.service.js"
+import { ChevronLeft, Share2, MessageCircle } from "lucide-react"
+import { ApiError } from "../../../api/client.js"
+import { formatarData } from "../../../shared/utils/formatarData.js"
+import { formatCurrency, unmask } from "../../../shared/utils/masks.js"
+import { EstadoTela } from "../../../shared/components/EstadoTela.js"
+import { Button, ButtonLink } from "../../../shared/components/Button.js"
+import { ContratoInfo } from "../components/ContratoInfo.js"
+import { ParcelaList } from "../components/ParcelaList.js"
+import { PagamentoModal, type PagamentoSuccessData } from "../../pagamento/components/PagamentoModal.js"
+import { ConfirmModal } from "../../../shared/components/ConfirmModal.js"
+import { useFeedback } from "../../../shared/feedback/useFeedback.js"
+import { getCliente } from "../../cliente/services/cliente.service.js"
+import type { Cliente } from "../../cliente/services/cliente.service.js"
+import { listPagamentos, type PagamentoComDetalhes } from "../../pagamento/services/pagamento.service.js"
+import { gerarComprovante } from "../../../shared/utils/comprovante.js"
+
+function formatarParcelasTexto(pagasRange: { inicio: number; fim: number } | null): string {
+  if (!pagasRange) return ""
+  if (pagasRange.inicio === pagasRange.fim) {
+    return `Parcela ${String(pagasRange.inicio).padStart(2, "0")}`
+  }
+  return `Parcelas ${String(pagasRange.inicio).padStart(2, "0")} a ${String(pagasRange.fim).padStart(2, "0")}`
+}
+
+function formatarDataHora(): string {
+  const agora = new Date()
+  const dia = String(agora.getDate()).padStart(2, "0")
+  const mes = String(agora.getMonth() + 1).padStart(2, "0")
+  const ano = agora.getFullYear()
+  const hora = String(agora.getHours()).padStart(2, "0")
+  const min = String(agora.getMinutes()).padStart(2, "0")
+  return `${dia}/${mes}/${ano} ${hora}:${min}`
+}
+
+function montarTextoComprovante(nome: string, valor: number, parcelasTexto: string, saldoRestante: number, dataTexto: string): string {
+  return [
+    "Comprovante de Pagamento",
+    "",
+    `Cliente: ${nome}`,
+    `Valor pago: R$ ${valor.toFixed(2).replace(".", ",")}`,
+    parcelasTexto,
+    `Saldo devedor: R$ ${saldoRestante.toFixed(2).replace(".", ",")}`,
+    dataTexto,
+    "",
+    "Gestão de Cobranças",
+  ].join("\n")
+}
+
+function canvasToFile(canvas: HTMLCanvasElement): File {
+  const dataUrl = canvas.toDataURL("image/png")
+  const byteString = atob(dataUrl.split(",")[1])
+  const array = new Uint8Array(byteString.length)
+  for (let i = 0; i < byteString.length; i++) {
+    array[i] = byteString.charCodeAt(i)
+  }
+  return new File([new Blob([array], { type: "image/png" })], "comprovante.png", { type: "image/png" })
+}
+
+export function ContratoDetail() {
+  const { t } = useTranslation()
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const [contrato, setContrato] = useState<Contrato | null>(null)
+  const [cliente, setCliente] = useState<Cliente | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const feedback = useFeedback()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pagamentosAnteriores, setPagamentosAnteriores] = useState<PagamentoComDetalhes[]>([])
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [comprovante, setComprovante] = useState<{
+    canvas: HTMLCanvasElement | null
+    file: File | null
+    waUrl: string
+  } | null>(null)
+
+  const fetch = useCallback(async () => {
+    if (!id) return
+    setLoading(true)
+    setError(null)
+    setCliente(null)
+    try {
+      const result = await getContrato(id)
+      setContrato(result)
+      const c = await getCliente(result.clienteId)
+      setCliente(c)
+      listPagamentos(id).then(setPagamentosAnteriores).catch(() => {})
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else {
+        setError(t("contrato.erroCarregarContrato"))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
+
+  useEffect(() => {
+    fetch()
+  }, [fetch])
+
+  function handleDeleteClick() {
+    setConfirmOpen(true)
+  }
+
+  async function handleDeleteConfirm() {
+    if (!id) return
+    setConfirmOpen(false)
+
+    await feedback.run({
+      loading: t("common.deleting"),
+      success: "Contrato excluído.",
+      error: t("cliente.erroExcluirContrato"),
+      action: async () => {
+        try {
+          await deleteContrato(id)
+          navigate(`/clientes/${contrato?.clienteId}`, { replace: true })
+        } catch (err) {
+          if (err instanceof ApiError) {
+            throw new Error(err.message)
+          }
+          throw err
+        }
+      },
+    })
+  }
+
+  const [pagandoParcela, setPagandoParcela] = useState<Parcela | null>(null)
+
+  const temPagamentos =
+    contrato?.parcelas?.some((p) => p.valorPago > 0) ?? false
+
+  const saldoDevedor =
+    contrato?.parcelas?.reduce((s, p) => s + p.saldoPendente, 0) ?? 0
+
+  const valorSugerido = pagandoParcela?.saldoPendente ?? saldoDevedor
+
+  const parcelaLabel = pagandoParcela && contrato
+    ? t("contrato.parcelaTemplate", { num: String(pagandoParcela.numero).padStart(2, "0"), total: contrato.quantidadeParcelas })
+    : undefined
+
+  function handleSuccess(data: PagamentoSuccessData) {
+    setPagandoParcela(null)
+    if (!cliente) return
+
+    const parcelasTexto = formatarParcelasTexto(data.pagasRange)
+    const dataTexto = formatarDataHora()
+
+    const canvas = gerarComprovante({
+      nome: cliente.nome,
+      valor: data.valor,
+      parcelasTexto,
+      saldoRestante: data.saldoRestante,
+      dataTexto,
+    })
+
+    const file = canvasToFile(canvas)
+    const texto = montarTextoComprovante(cliente.nome, data.valor, parcelasTexto, data.saldoRestante, dataTexto)
+    const waUrl = `https://api.whatsapp.com/send?phone=55${unmask(cliente.telefone)}&text=${encodeURIComponent(texto)}`
+
+    setComprovante({ canvas, file, waUrl })
+    feedback.show({ status: "success", message: t("cliente.pagamentoSucesso") })
+    fetch()
+  }
+
+  async function handleCompartilharComprovante() {
+    if (!comprovante) return
+
+    if (comprovante.file && navigator.canShare && navigator.canShare({ files: [comprovante.file] })) {
+      try {
+        await navigator.share({ files: [comprovante.file], title: "Comprovante de pagamento" })
+        setComprovante(null)
+        return
+      } catch {}
+    }
+
+    try {
+      await navigator.share({ text: "Comprovante de pagamento" })
+      setComprovante(null)
+    } catch {}
+  }
+
+  function handleWhatsAppComprovante() {
+    if (!comprovante) return
+    window.open(comprovante.waUrl, "_blank")
+    setComprovante(null)
+  }
+
+  useEffect(() => {
+    if (!comprovante?.canvas || !canvasRef.current) return
+    const display = canvasRef.current
+    display.width = comprovante.canvas.width
+    display.height = comprovante.canvas.height
+    const ctx = display.getContext("2d")
+    if (ctx) ctx.drawImage(comprovante.canvas, 0, 0)
+  }, [comprovante])
+
+  useEffect(() => {
+    const locked = !!comprovante
+    if (locked) {
+      document.documentElement.style.overflow = "hidden"
+      document.body.style.overflow = "hidden"
+    } else {
+      document.documentElement.style.overflow = ""
+      document.body.style.overflow = ""
+    }
+    return () => {
+      document.documentElement.style.overflow = ""
+      document.body.style.overflow = ""
+    }
+  }, [comprovante])
+
+  return (
+    <div className="mx-auto max-w-2xl p-4">
+      {cliente && (
+        <div className="mb-4 flex items-center gap-2">
+          <Link
+            to={contrato ? `/clientes/${contrato.clienteId}` : "/contratos"}
+            className="text-text-muted hover:text-text-primary"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Link>
+          <h1 className="flex-1 text-3xl font-semibold">{cliente.nome}</h1>
+          {contrato && !temPagamentos && (
+            <ButtonLink to={`/contratos/${contrato.id}/editar`}>
+              {t("common.edit")}
+            </ButtonLink>
+          )}
+        </div>
+      )}
+
+      <EstadoTela
+        loading={loading}
+        error={error}
+        empty={!contrato}
+        emptyMessage={t("contrato.naoEncontrado")}
+        onRetry={fetch}
+      >
+        {contrato && (
+          <>
+            <div className="mb-6">
+              <ContratoInfo contrato={contrato} />
+            </div>
+
+            <div className="mb-6">
+              <h3 className="mb-3 text-xl font-semibold">{t("contrato.parcelasLabel")}</h3>
+              <ParcelaList
+                parcelas={contrato.parcelas || []}
+                onPagar={setPagandoParcela}
+              />
+            </div>
+
+            {pagamentosAnteriores.length > 0 && (
+              <div className="mb-6">
+                <h3 className="mb-3 text-xl font-semibold">{t("cliente.pagamentos")}</h3>
+                <div className="space-y-2">
+                  {pagamentosAnteriores.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between rounded-md border p-3 text-sm"
+                    >
+                      <span className="text-text-secondary">{formatarData(p.data, t)}</span>
+                      <span>
+                        <span className="text-sm font-medium text-text-secondary">R$</span>{" "}
+                        <span className="font-semibold">{formatCurrency(p.valor)}</span>
+                      </span>
+                      <span className="text-xs text-text-muted">{t("cliente.parcelasCount", { count: p.parcelas.length })}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!temPagamentos && (
+              <Button variant="danger" onClick={handleDeleteClick}>
+                {t("common.delete")}
+              </Button>
+            )}
+
+            <ConfirmModal
+              open={confirmOpen}
+              title={t("cliente.excluirContratoTitle")}
+              message={t("cliente.excluirContratoMessage")}
+              confirmLabel={t("common.confirmDelete")}
+              danger
+  
+              onConfirm={handleDeleteConfirm}
+              onCancel={() => setConfirmOpen(false)}
+            />
+
+            {pagandoParcela && contrato && (
+              <PagamentoModal
+                contratoId={contrato.id}
+                valorSugerido={valorSugerido}
+                saldoDevedor={saldoDevedor}
+                parcelaLabel={parcelaLabel}
+                onClose={() => setPagandoParcela(null)}
+                onSuccess={handleSuccess}
+              />
+            )}
+
+
+          </>
+        )}
+      </EstadoTela>
+
+      {comprovante && (
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/40"
+          onClick={() => setComprovante(null)}
+        >
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div
+              className="mx-auto w-full max-w-sm rounded-md bg-surface p-4 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <canvas
+                ref={canvasRef}
+                className="w-full rounded-md border border-border-light"
+              />
+
+              <div className="mt-4 flex gap-4">
+                <Button
+                  onClick={handleCompartilharComprovante}
+                  className="flex flex-1 items-center justify-center gap-1"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Compartilhar
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleWhatsAppComprovante}
+                  className="flex flex-1 items-center justify-center gap-1"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp
+                </Button>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => setComprovante(null)}
+                className="mt-2 w-full"
+              >
+                {t("common.cancel")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

@@ -1,0 +1,531 @@
+# BUSINESS RULES
+
+**Status:** Aprovado
+
+**Versão:** 1.5
+
+**Última atualização:** 11/07/2026
+
+---
+
+# Objetivo
+
+Definir as regras de negócio que governam o comportamento das entidades do sistema.
+
+Este documento complementa o `DOMAIN.md` e representa a fonte oficial das regras de negócio do projeto.
+
+---
+
+# Clientes
+
+## BR-001
+
+Um cliente pode possuir um ou vários contratos. (Relacionamento definido em DOMAIN.md)
+
+---
+
+## BR-002
+
+Cada contrato pertence obrigatoriamente a um único cliente. (Relacionamento definido em DOMAIN.md)
+
+---
+
+## BR-003
+
+Os dados cadastrais do cliente poderão ser alterados a qualquer momento.
+
+Alterações cadastrais não deverão modificar informações históricas registradas em contratos, parcelas, pagamentos ou movimentações financeiras.
+
+---
+
+# Contratos
+
+## BR-004
+
+Todo contrato deverá possuir obrigatoriamente:
+
+- Cliente associado
+- Valor Base
+- Percentual de Juros
+- Quantidade de Parcelas
+- Data de Início
+
+Sem essas informações o contrato não poderá ser criado.
+
+---
+
+## BR-005
+
+O Valor Final do contrato deverá ser calculado automaticamente utilizando o percentual de juros informado.
+
+O sistema deverá manter registrados:
+
+- Valor Base
+- Percentual de Juros
+- Valor Final
+
+Na visualização do contrato, o Valor Base deverá possuir maior destaque visual, enquanto o percentual de juros e o Valor Final deverão ser apresentados como informações complementares.
+
+O Valor Final será calculado como:
+
+`ValorFinal = ValorBase × (1 + taxaJuros / 100)`
+
+A taxa de juros padrão será de 20%, podendo ser alterada durante a criação do contrato.
+
+---
+
+## BR-006
+
+O percentual de juros e a quantidade de parcelas poderão ser alterados somente durante a criação do contrato ou durante sua edição, desde que nenhum pagamento tenha sido registrado.
+
+Caso existam pagamentos vinculados ao contrato, suas condições financeiras deverão permanecer imutáveis.
+
+---
+
+## BR-007
+
+Cada contrato possui seu próprio ciclo de vida.
+
+Contratos diferentes do mesmo cliente não compartilham parcelas nem pagamentos.
+
+O encerramento de um contrato não deverá afetar os demais contratos do mesmo cliente.
+
+---
+
+# Parcelas
+
+## BR-008
+
+A quantidade de parcelas será definida durante a criação do contrato.
+
+A alteração da quantidade de parcelas somente será permitida enquanto não existir nenhum pagamento registrado para o contrato.
+
+---
+
+## BR-009
+
+Cada parcela poderá assumir apenas um dos seguintes estados:
+
+- Pendente
+- Parcial
+- Paga
+
+---
+
+## BR-010
+
+Ao registrar um pagamento inferior ao valor previsto da parcela, ela deverá permanecer com status **Parcial**.
+
+---
+
+## BR-012
+
+Quando o saldo pendente de uma parcela atingir zero, seu status deverá ser alterado automaticamente para **Paga**.
+
+---
+
+# Pagamentos
+
+## BR-013
+
+Todo pagamento deverá registrar automaticamente:
+
+- Data
+- Hora
+- Valor recebido
+
+---
+
+## BR-014
+
+O operador poderá registrar pagamentos a qualquer momento.
+
+---
+
+## BR-015
+
+Um pagamento poderá ser aplicado integral ou parcialmente sobre uma ou mais parcelas do mesmo contrato.
+
+---
+
+## BR-016
+
+O valor aplicado a um contrato nunca poderá exceder seu saldo devedor.
+
+---
+
+## BR-017
+
+Todo pagamento deverá permanecer registrado permanentemente para fins de histórico.
+
+Não será permitida exclusão física do histórico de pagamentos.
+
+---
+
+# Caixa
+
+## BR-018
+
+O Caixa Base representa o capital disponível para concessão de novos contratos.
+
+Seu valor será definido pelo operador e sua alteração deverá ocorrer apenas por meio de uma funcionalidade específica, evitando modificações acidentais durante a operação diária.
+
+Toda alteração do Caixa Base deverá gerar uma Movimentação Financeira correspondente, garantindo rastreabilidade completa da operação.
+
+---
+
+## BR-019
+
+Sempre que um novo contrato for criado, o Valor Base do contrato deverá ser debitado automaticamente do Caixa Base.
+
+Essa operação deverá gerar uma movimentação financeira vinculada ao contrato.
+
+---
+
+## BR-020
+
+Sempre que um pagamento for registrado, o valor efetivamente recebido deverá ser incorporado automaticamente ao Caixa Base, independentemente de o pagamento quitar total ou parcialmente uma parcela.
+
+Essa operação deverá gerar uma movimentação financeira vinculada ao pagamento.
+
+---
+
+## BR-021
+
+Sempre que um gasto for registrado, seu valor deverá ser debitado automaticamente do Caixa Base.
+
+Essa operação deverá gerar uma movimentação financeira vinculada ao gasto.
+
+---
+
+## BR-022
+
+Toda movimentação financeira deverá possuir uma origem claramente identificável.
+
+Exemplos:
+
+- Contrato
+- Pagamento
+- Gasto
+- Ajuste Manual (caso implementado futuramente)
+
+---
+
+## BR-023
+
+O Caixa nunca criará valores próprios.
+
+Todos os indicadores financeiros deverão ser calculados exclusivamente a partir das movimentações financeiras registradas.
+
+---
+
+## BR-024
+
+O valor estimado para cobrança do dia deverá ser calculado automaticamente considerando todas as parcelas previstas para a data atual.
+
+Esse indicador possui caráter exclusivamente informativo e não gera movimentações financeiras.
+
+---
+
+## BR-025
+
+O total cobrado do dia deverá considerar exclusivamente pagamentos registrados na data atual.
+
+Ao selecionar esse indicador, o sistema deverá apresentar todas as movimentações que compõem seu valor, permitindo identificar o cliente, contrato e pagamento correspondente.
+
+---
+
+## BR-026
+
+Os indicadores semanais deverão considerar exclusivamente movimentações ocorridas dentro do período semanal vigente.
+
+Ao selecionar qualquer indicador semanal, o sistema deverá apresentar as movimentações que originaram seu valor.
+
+---
+
+## BR-027
+
+A liquidação semanal deverá ocorrer automaticamente a cada sete dias.
+
+A liquidação reiniciará apenas os indicadores semanais.
+
+Nenhuma movimentação financeira poderá ser removida durante esse processo.
+
+Todo o histórico deverá permanecer disponível para consulta.
+
+---
+
+# Gastos
+
+## BR-028
+
+Todo gasto deverá possuir obrigatoriamente:
+
+- Valor
+- Categoria
+- Data
+
+Opcionalmente poderá conter observações.
+
+Todo gasto deverá impactar automaticamente o Caixa Base e os indicadores financeiros correspondentes.
+
+---
+
+# Autenticação
+
+## BR-055
+
+Cada operador do sistema possui credenciais próprias (email + senha).
+
+O acesso ao sistema é restrito a operadores autenticados. Nenhuma operação poderá ser realizada sem autenticação válida.
+
+---
+
+## BR-056
+
+Os dados são isolados por operador.
+
+Um operador autenticado visualiza e manipula exclusivamente seus próprios registros — clientes, contratos, pagamentos, gastos, caixa e histórico operacional. Nenhum operador poderá acessar dados de outro operador em hipótese alguma.
+
+---
+
+## BR-057
+
+Apenas o administrador do sistema pode criar novos operadores.
+
+O registro de novos operadores é realizado exclusivamente por um operador com permissão de administrador, através de endpoint protegido.
+
+---
+
+## BR-058
+
+O token de autenticação (JWT) possui validade de 7 dias.
+
+Ao expirar, o operador é redirecionado para a tela de login. Nenhuma operação poderá ser realizada com token expirado.
+
+---
+
+# Histórico
+
+## BR-029
+
+Nenhum pagamento registrado poderá ser removido fisicamente.
+
+---
+
+
+
+## BR-032
+
+Toda movimentação financeira deverá permanecer disponível para consulta histórica.
+
+Os indicadores apresentados pelo sistema deverão permitir navegar até as movimentações que compõem seus valores.
+
+---
+
+# Operações / Atendimento
+
+## BR-048
+
+Todo cliente inicia automaticamente com Resultado Operacional = PENDENTE.
+
+Esse é o estado padrão de qualquer cobrança antes do primeiro atendimento ser realizado.
+
+---
+
+## BR-049
+
+O sistema reconhece exatamente quatro Resultados Operacionais:
+
+- **PENDENTE** — Nenhum atendimento foi realizado. Estado inicial.
+- **VISITADO** — O operador realizou atendimento presencial.
+- **NAO_ENCONTRADO** — Foi realizada tentativa de atendimento, mas o cliente não foi localizado.
+- **PROMESSA** — O cliente informou que realizará o pagamento posteriormente.
+
+---
+
+## BR-050
+
+Registrar um atendimento (VISITADO, NAO_ENCONTRADO ou PROMESSA) altera exclusivamente o Resultado Operacional do cliente.
+
+Nenhuma informação financeira — parcelas, pagamentos, saldo devedor ou Caixa Base — poderá ser modificada automaticamente em decorrência de um atendimento.
+
+---
+
+## BR-051
+
+Pagamento e Atendimento são fluxos independentes.
+
+O registro de pagamento continua sendo realizado exclusivamente pelo fluxo de Pagamentos. Nenhum atendimento poderá quitar parcelas, alterar saldo devedor ou modificar qualquer informação financeira do contrato.
+
+---
+
+## BR-052
+
+O Resultado Operacional armazena apenas o último atendimento realizado.
+
+Nesta versão do sistema não existe histórico de atendimentos. Registrar um novo atendimento sobrescreve o resultado anterior.
+
+---
+
+## BR-053
+
+As listas operacionais (Rota de Cobrança, Dashboard e Cobranças do Dia) exibem exclusivamente clientes com Resultado Operacional = PENDENTE.
+
+Ao registrar qualquer atendimento (VISITADO, NAO_ENCONTRADO ou PROMESSA), o cliente é automaticamente removido da fila operacional ativa. Clientes atendidos permanecem acessíveis via tela "Atendidos Hoje" para consulta e reengajamento.
+
+---
+
+## BR-054
+
+Toda alteração de Resultado Operacional deve ser propagada automaticamente para todas as telas operacionais ativas (Rota, Dashboard, Cobranças do Dia) via EventBus interno, garantindo que a fila operacional reflita o estado real sem necessidade de recarregamento manual.
+
+---
+
+# Integridade
+
+## BR-033
+
+Toda regra de negócio deverá ser implementada no backend.
+
+O frontend poderá realizar validações de usabilidade, porém nunca será responsável por garantir a integridade das regras de negócio.
+
+---
+
+## BR-034
+
+Toda alteração nas regras de negócio deverá ser registrada neste documento antes da implementação correspondente.
+
+---
+
+## BR-035
+
+Todo indicador financeiro apresentado pelo sistema deverá permitir rastrear as movimentações que originaram seu valor.
+
+Essa rastreabilidade deverá permitir identificar, quando aplicável:
+
+- Cliente
+- Contrato
+- Parcela
+- Pagamento
+- Gasto
+
+---
+
+# Clientes
+
+## BR-036
+
+O CPF do cliente é opcional no cadastro.
+
+Quando informado, deverá conter exatamente 11 dígitos numéricos e será armazenado sem formatação.
+
+A validação do CPF será realizada no backend, utilizando código compartilhado.
+
+---
+
+## BR-037
+
+O nome do comércio é obrigatório no cadastro do cliente.
+
+---
+
+## BR-038
+
+A cidade no endereço do cliente é opcional.
+
+---
+
+## BR-043
+
+O CPF do cliente, quando informado, deve ser único no sistema.
+
+Não é permitido cadastrar dois clientes com o mesmo CPF.
+
+Na criação, o sistema deve verificar se o CPF já existe antes de salvar.
+
+Na edição, o sistema deve verificar se o CPF já existe, excluindo o próprio cliente da consulta.
+
+A validação só deve ser aplicada quando o CPF for informado (campo opcional).
+
+---
+
+# Contratos
+
+## BR-039
+
+As parcelas de um contrato serão geradas com vencimentos diários consecutivos.
+
+A primeira parcela vence no dia seguinte à data de início do contrato.
+
+---
+
+## BR-040
+
+A periodicidade das parcelas poderá ser alterada futuramente por meio de configuração no contrato, sem impacto retroativo nas parcelas já existentes.
+
+---
+
+## BR-041
+
+Na edição do contrato antes da existência de pagamentos, as parcelas existentes devem ser substituídas pelas novas (soft delete das antigas + criação das novas), preservando o histórico.
+
+---
+
+## BR-042
+
+As parcelas de um contrato não devem ter vencimento em domingo.
+
+Se o cálculo do vencimento cair em um domingo, a data deve ser ajustada automaticamente para a segunda-feira seguinte.
+
+Exemplo:
+Contrato com início em 01/07/2026 (quarta-feira):
+- Parcela 1 → 02/07 (quinta ✅)
+- Parcela 4 → 05/07 (domingo ❌ → ajusta para 06/07, segunda-feira)
+
+---
+
+## BR-042-A
+
+A data final do contrato (dataFinal) será calculada automaticamente como `dataInicio + quantidadeParcelas` dias, ajustando para segunda-feira se o cálculo recair em um domingo.
+
+---
+
+# Pagamentos
+
+## BR-044
+
+Os pagamentos devem ser distribuídos entre as parcelas do contrato em ordem crescente de número (parcela mais antiga primeiro).
+
+---
+
+## BR-045
+
+Se o valor do pagamento exceder o saldo pendente da parcela atual, o excedente deve ser automaticamente aplicado à próxima parcela pendente, respeitando o saldo devedor total do contrato.
+
+O valor total aplicado a um contrato nunca poderá exceder seu saldo devedor (BR-016).
+
+---
+
+## BR-046
+
+O contrato deve ter seu estado alterado automaticamente para **Finalizado** quando todas as suas parcelas atingirem o estado **Paga**.
+
+---
+
+## BR-047
+
+Todo pagamento deve ser registrado na tabela `pagamentos`, com sua distribuição detalhada registrada na tabela `pagamento_parcelas`, garantindo rastreabilidade completa de qual valor foi aplicado em cada parcela.
+
+---
+
+# Referências
+
+- NORTH-STAR.md
+- PROJECT.md
+- DOMAIN.md
+- ARCHITECTURE.md
+- CONVENTIONS.md
+- ADR-001
+- PLAN-009-conceito-atendimento.md
+- PLAN-015-autenticacao.md

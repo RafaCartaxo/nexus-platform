@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  input,
+  select,
+  textarea {
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+  }
+}
+
+html {
+  color-scheme: light dark;
+}
+
+:root {
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-light: #DBEAFE;
+  --color-primary-text: #1E40AF;
+
+  --color-success: #16A34A;
+  --color-success-hover: #15803D;
+  --color-success-light: #DCFCE7;
+  --color-success-text: #166534;
+  --color-success-border: #BBF7D0;
+
+  --color-warning: #CA8A04;
+  --color-warning-light: #FEF9C3;
+  --color-warning-text: #854D0E;
+
+  --color-danger: #DC2626;
+  --color-danger-hover: #B91C1C;
+  --color-danger-light: #FEE2E2;
+  --color-danger-text: #991B1B;
+
+  --color-info: #2563EB;
+  --color-info-light: #DBEAFE;
+  --color-info-text: #1E40AF;
+
+  --color-secondary: #6B7280;
+  --color-secondary-light: #F9FAFB;
+
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F9FAFB;
+  --color-surface-hover: #F3F4F6;
+
+  --color-text-primary: #1F2937;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: #9CA3AF;
+
+  --color-border: #D1D5DB;
+  --color-border-light: #E5E7EB;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+.dark {
+  --color-primary: #3B82F6;
+  --color-primary-hover: #2563EB;
+  --color-primary-light: #1E3A5F;
+  --color-primary-text: #93C5FD;
+
+  --color-success: #22C55E;
+  --color-success-hover: #16A34A;
+  --color-success-light: #052E16;
+  --color-success-text: #86EFAC;
+  --color-success-border: #166534;
+
+  --color-warning: #EAB308;
+  --color-warning-light: #422006;
+  --color-warning-text: #FDE047;
+
+  --color-danger: #EF4444;
+  --color-danger-hover: #DC2626;
+  --color-danger-light: #450A0A;
+  --color-danger-text: #FCA5A5;
+
+  --color-info: #3B82F6;
+  --color-info-light: #172554;
+  --color-info-text: #93C5FD;
+
+  --color-secondary: #9CA3AF;
+  --color-secondary-light: #1F2937;
+
+  --color-surface: #111827;
+  --color-surface-secondary: #1F2937;
+  --color-surface-hover: #374151;
+
+  --color-text-primary: #F9FAFB;
+  --color-text-secondary: #9CA3AF;
+  --color-text-muted: #6B7280;
+
+  --color-border: #4B5563;
+  --color-border-light: #374151;
+}
+
+input::placeholder {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+html, body {
+  overscroll-behavior-x: none;
+}
