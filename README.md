@@ -12,9 +12,8 @@ Sistema de gestão de cobranças em campo.
 ```
 src/                          — Backend (Express API)
 frontend/                     — Frontend (React SPA)
-Documentação do Projeto/docs/ — Documentação completa do projeto
+docs/                         — Documentação completa do projeto
 scripts/                      — Scripts utilitários
-api-collection.json           — Coleção Postman com todos os endpoints
 ```
 
 ## Pré-requisitos
@@ -28,13 +27,9 @@ api-collection.json           — Coleção Postman com todos os endpoints
 git clone https://github.com/RafaCartaxo/nexus-platform.git
 cd nexus-platform
 
-# Backend
+# Instala dependências do backend e do frontend
 npm install
-
-# Frontend
-cd frontend
-npm install
-cd ..
+cd frontend && npm install && cd ..
 ```
 
 O banco de dados SQLite (`gestao.db`) é criado automaticamente na primeira execução — não requer configuração.
@@ -49,32 +44,28 @@ cp .env.example .env
 
 | Variável | Padrão | Descrição |
 |----------|--------|-----------|
+| `NODE_ENV` | `development` | Ambiente (`development` ou `production`) |
 | `PORT` | `3000` | Porta do servidor backend |
 | `DB_PATH` | `gestao.db` | Caminho do banco SQLite |
 
 ## Rodando
 
-```bash
-# Backend (porta 3000)
-npm run dev
+### Desenvolvimento
 
-# Frontend (em outro terminal)
-cd frontend
+```bash
 npm run dev
 ```
 
-A API estará em `http://localhost:3000/api`. Importe `api-collection.json` no Postman para explorar os endpoints.
+Sobe backend (porta 3000) + frontend (Vite com HMR) em um único comando. A API estará em `http://localhost:3000/api`.
 
-## Build
+### Produção
 
 ```bash
-# Backend
-npm run build
-
-# Frontend
-cd frontend
-npm run build
+npm run build   # Compila backend (tsc) + frontend (vite build)
+npm start       # Express serve API + frontend estático em :3000
 ```
+
+Para explorar os endpoints, importe `docs/api-collection.json` no Postman.
 
 ## Testes
 

@@ -50,19 +50,20 @@ cp .env.example .env
 
 | Variável | Padrão | Descrição |
 |----------|--------|-----------|
+| `NODE_ENV` | `development` | Ambiente (development ou production) |
 | `PORT` | `3000` | Porta do servidor |
 | `DB_PATH` | `gestao.db` | Caminho do banco SQLite |
 
 ## Execução
 
 ```bash
-# Desenvolvimento (hot reload)
+# Desenvolvimento — sobe backend (tsx watch) + frontend (Vite HMR) em um comando
 npm run dev
 
-# Build de produção
+# Compilar backend + frontend para produção
 npm run build
 
-# Executar build
+# Produção — Express serve API em /api/* e frontend estático como SPA
 npm start
 ```
 

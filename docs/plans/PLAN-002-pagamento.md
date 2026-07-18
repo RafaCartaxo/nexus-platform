@@ -131,7 +131,7 @@ Operador → Detalhe do Contrato
 | `frontend/src/App.tsx` | Nenhuma rota nova (pagamento via modal no detail do contrato) |
 | `frontend/src/shared/utils/masks.ts` | Novas funções: `maskMonetario`, `unmaskMonetario` |
 | `frontend/src/shared/utils/` | Novo utilitário: `formatarData` (dd/mm) |
-| `api-collection.json` | Endpoints de pagamento adicionados |
+| `docs/api-collection.json` | Endpoints de pagamento adicionados |
 
 ---
 
