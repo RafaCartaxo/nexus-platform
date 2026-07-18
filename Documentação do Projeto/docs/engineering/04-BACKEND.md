@@ -32,6 +32,50 @@ A substituição de qualquer tecnologia deverá preservar a arquitetura definida
 
 ---
 
+# Setup e Execução
+
+## Instalação
+
+```bash
+npm install
+```
+
+## Variáveis de ambiente (opcionais)
+
+As variáveis possuem defaults que funcionam sem configuração. Para customizar, copie o `.env.example` para `.env`:
+
+```bash
+cp .env.example .env
+```
+
+| Variável | Padrão | Descrição |
+|----------|--------|-----------|
+| `PORT` | `3000` | Porta do servidor |
+| `DB_PATH` | `gestao.db` | Caminho do banco SQLite |
+
+## Execução
+
+```bash
+# Desenvolvimento (hot reload)
+npm run dev
+
+# Build de produção
+npm run build
+
+# Executar build
+npm start
+```
+
+O banco de dados é criado automaticamente na primeira execução (`createTables()` em `src/database.ts`).
+
+## Testes
+
+```bash
+npm test
+```
+
+---
+
 # Estrutura Recomendada dos Módulos
 
 Cada módulo deverá possuir uma estrutura semelhante à seguinte:

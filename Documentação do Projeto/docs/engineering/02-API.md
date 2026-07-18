@@ -1,6 +1,6 @@
 # API
 
-**Status:** Em construção — módulos Cliente, Contrato e Pagamento documentados
+**Status:** Em construção — módulos Cliente, Contrato, Pagamento, Operações, Caixa e Gasto documentados
 
 **Versão:** 1.2
 
