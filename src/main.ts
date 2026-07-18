@@ -1,5 +1,7 @@
 import express from "express"
 import cors from "cors"
+import path from "path"
+import { fileURLToPath } from "url"
 import { createTables } from "./database.js"
 import { clienteRoutes } from "./modules/cliente/presentation/routes/cliente.routes.js"
 import { contratoRoutes } from "./modules/contrato/presentation/routes/contrato.routes.js"
@@ -21,6 +23,15 @@ app.use("/api/pagamentos", pagamentoRoutes)
 app.use("/api/operacoes", operacoesRoutes)
 app.use("/api/caixa", caixaRoutes)
 app.use("/api/gastos", gastoRoutes)
+
+if (process.env.NODE_ENV === "production") {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url))
+  const frontendDist = path.resolve(__dirname, "../frontend/dist")
+  app.use(express.static(frontendDist))
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(frontendDist, "index.html"))
+  })
+}
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("Erro não tratado:", err)

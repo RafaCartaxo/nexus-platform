@@ -84,4 +84,4 @@ npm test
 
 ## Documentação
 
-A documentação completa do projeto está em [`Documentação do Projeto/docs/`](Documentação%20do%20Projeto/docs/README.md). Consulte também o [guia de contribuição](Documentação%20do%20Projeto/docs/CONTRIBUTING.md).
+A documentação completa do projeto está em [`docs/`](docs/README.md). Consulte também o [guia de contribuição](docs/CONTRIBUTING.md).
