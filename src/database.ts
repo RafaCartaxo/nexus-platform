@@ -290,6 +290,14 @@ export function createTables() {
       data.setDate(data.getDate() + row.quantidadeParcelas)
       if (data.getDay() === 0) {
         data.setDate(data.getDate() + 1)
+      }
+      const dataFinal = getLocalDateString(data)
+      sqlite.prepare("UPDATE contratos SET dataFinal = ? WHERE id = ?").run(dataFinal, row.id)
+    }
+  } catch {
+    // coluna ja existe (banco novo ou migracao ja aplicada)
+  }
+
   // Migracao: normalizar datas ISO 8601 completas para date-only nas movimentacoes
   sqlite.exec(`
     UPDATE movimentacoesFinanceiras
@@ -302,13 +310,6 @@ export function createTables() {
     sqlite.exec("ALTER TABLE fechamentos_semanais ADD COLUMN saldoFechamento REAL NOT NULL DEFAULT 0")
   } catch {
     // coluna ja existe
-  }
-}
-      const dataFinal = getLocalDateString(data)
-      sqlite.prepare("UPDATE contratos SET dataFinal = ? WHERE id = ?").run(dataFinal, row.id)
-    }
-  } catch {
-    // coluna ja existe (banco novo ou migracao ja aplicada)
   }
 
   // Migracao: adicionar coluna caixaBase em fechamentos_semanais existentes
